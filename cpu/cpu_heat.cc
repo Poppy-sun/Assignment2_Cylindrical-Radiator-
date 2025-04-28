@@ -57,4 +57,26 @@ void compute_row_averages(const std::vector<std::vector<float>>& matrix, int n, 
     } 
 }
 
-void run_cpu_simulation(int n, int m, int p, bool compute_average{}
+void run_cpu_simulation(int n, int m, int p, bool compute_average
+		{
+		// Create two matrices
+    std::vector<std::vector<float>> previousMatrix(n, std::vector<float>(m, 0.0f));
+    std::vector<std::vector<float>> nextMatrix(n, std::vector<float>(m, 0.0f));
+
+    // Initialize them
+    initialize_matrices(previousMatrix, nextMatrix, n, m);
+
+    // Perform p iterations
+    for (int iter = 0; iter < p; ++iter) {
+        heat_step(previousMatrix, nextMatrix, n, m);
+
+        // Swap matrices (next becomes previous for next iteration)
+        previousMatrix.swap(nextMatrix);
+    }
+
+    // If requested, compute row averages
+    if (compute_average) {
+        compute_row_averages(previousMatrix, n, m);
+    }
+		
+		}
