@@ -46,9 +46,15 @@ void heat_step(const std::vector<std::vector<float>>& previousMatrix,
 // Function to compute average temperature per row
 void compute_row_averages(const std::vector<std::vector<float>>& matrix, int n, int m) {
     for (int i = 0; i < n; ++i) {
-        
-
-
+       for (int i = 0; i < n; ++i) {
+        float sum = 0.0f;
+        for (int j = 0; j < m; ++j) {
+            sum += matrix[i][j];
+        }
+        float average = sum / (float)m;
+        std::cout << "Row " << i << " average temperature: "
+                  << std::fixed << std::setprecision(6) << average << std::endl;
+    } 
 }
 
 void run_cpu_simulation(int n, int m, int p, bool compute_average{}
