@@ -26,7 +26,22 @@ void initialize_matrices(std::vector<std::vector<float>>& previousMatrix,
 void heat_step(const std::vector<std::vector<float>>& previousMatrix,
                std::vector<std::vector<float>>& nextMatrix,
                int n, int m{
-}
+ for (int i = 0; i < n; ++i) {
+        for (int j = 1; j < m; ++j) { // skip column 0 (boundary)
+            int jm2 = (j - 2 + m) % m; // wrap around
+            int jm1 = (j - 1 + m) % m;
+            int jp1 = (j + 1) % m;
+            int jp2 = (j + 2) % m;
+
+            nextMatrix[i][j] = (1.60f * previousMatrix[i][jm2] +
+                                1.55f * previousMatrix[i][jm1] +
+                                1.0f  * previousMatrix[i][j] +
+                                0.60f * previousMatrix[i][jp1] +
+                                0.25f * previousMatrix[i][jp2]) / 5.0f;
+        }
+    }
+	      
+ }
 
 // Function to compute average temperature per row
 void compute_row_averages(const std::vector<std::vector<float>>& matrix, int n, int m) {
