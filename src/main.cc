@@ -4,8 +4,8 @@
 #include <string>
 #include <cstdlib> // for atoi
 
-int main(
-
+int main(int argc, char* argv[])
+{
 int n = 32; // default rows
     int m = 32; // default columns
     int p = 10; // default iterations

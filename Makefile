@@ -24,22 +24,22 @@ all: $(BUILD_DIR) $(TARGET)
 
 # Link objects into binary
 $(TARGET): $(OBJECTS)
-        $(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 # Compile CPU sources
 $(BUILD_DIR)/%.o: $(CPU_DIR)/%.cc
-        $(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Compile SRC sources
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc
-        $(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Create build directory
 $(BUILD_DIR):
-        mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
 
 # Clean
 clean:
-        rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) $(TARGET)
 
 .PHONY: all clean
