@@ -37,7 +37,7 @@ __global__ void gpu_compute_row_averages(const float* d_matrix, float* d_average
         d_averages[row] = sum / (float)m;
     }
 }
-void run_gpu_simulation(int n, int m, int p, bool compute_average, std::vector<std::vector<float>>& result_matrix) {
+void run_gpu_simulation(int n, int m, int p, bool compute_average, std::vector<std::vector<float>>& result_matrix,bool timing_enabled, int threads_per_block) {
     // Allocate host matrices
     std::vector<float> h_previousMatrix(n * m, 0.0f);
     std::vector<float> h_nextMatrix(n * m, 0.0f);
@@ -67,7 +67,7 @@ void run_gpu_simulation(int n, int m, int p, bool compute_average, std::vector<s
 
     // Setup execution config
     dim3 gridDim(n);
-    dim3 blockDim(m);
+    dim3 blockDim(threads_per_block);
 
     // Run p iterations
     for (int iter = 0; iter < p; ++iter) {

@@ -27,6 +27,7 @@ void heat_step(const std::vector<std::vector<float>>& previousMatrix,
                std::vector<std::vector<float>>& nextMatrix,
                int n, int m)
 {
+	 #pragma omp parallel for collapse(2)
  for (int i = 0; i < n; ++i) {
         for (int j = 1; j < m; ++j) { // skip column 0 (boundary)
             int jm2 = (j - 2 + m) % m; // wrap around
@@ -58,7 +59,7 @@ void compute_row_averages(const std::vector<std::vector<float>>& matrix, int n, 
     } 
 }
 
-void run_cpu_simulation(int n, int m, int p, bool compute_average)	{
+void run_cpu_simulation(int n, int m, int p, bool compute_average,std::vector<std::vector<float>>& matrix)	{
 		// Create two matrices
     std::vector<std::vector<float>> previousMatrix(n, std::vector<float>(m, 0.0f));
     std::vector<std::vector<float>> nextMatrix(n, std::vector<float>(m, 0.0f));
@@ -79,4 +80,4 @@ void run_cpu_simulation(int n, int m, int p, bool compute_average)	{
         compute_row_averages(previousMatrix, n, m);
     }
 		
-		}
+}

@@ -1,7 +1,7 @@
 # Compiler and Flags
 CXX = g++
 NVCC = nvcc
-CXXFLAGS = -O2 -Wall -Iinclude
+CXXFLAGS = -O2 -Wall -Iinclude -fopenmp
 NVCCFLAGS = -O2 -Iinclude
 
 # Directories
