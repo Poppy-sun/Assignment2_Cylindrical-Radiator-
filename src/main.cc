@@ -32,13 +32,17 @@ int main(int argc, char* argv[]) {
             compute_average = true;
         } else if (arg == "-g") {
             use_gpu = true;
+        }  else if (arg == "-c") {
+             skip_cpu = true;
+        }  else if (arg == "-t") {
+             timing_enabled = true;
         } else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             return 1;
         }
     }
 
-std::vector<std::vector<float>> cpu_result;
+    std::vector<std::vector<float>> cpu_result;
     std::vector<std::vector<float>> gpu_result;
 
     if (!use_gpu || !skip_cpu) {
