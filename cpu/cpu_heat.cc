@@ -58,8 +58,8 @@ void compute_row_averages(const std::vector<std::vector<float>>& matrix, int n, 
                   << std::fixed << std::setprecision(6) << average << std::endl;
     } 
 }
-
-void run_cpu_simulation(int n, int m, int p, bool compute_average,std::vector<std::vector<float>>& matrix)	{
+template<typename T>
+void run_cpu_simulation(int n, int m, int p, bool compute_average,std::vector<std::vector<T>>& matrix)	{
 		// Create two matrices
     std::vector<std::vector<float>> previousMatrix(n, std::vector<float>(m, 0.0f));
     std::vector<std::vector<float>> nextMatrix(n, std::vector<float>(m, 0.0f));
@@ -81,3 +81,6 @@ void run_cpu_simulation(int n, int m, int p, bool compute_average,std::vector<st
     }
 		
 }
+template void run_cpu_simulation<float>(int, int, int, bool, std::vector<std::vector<float>>&);
+template void run_cpu_simulation<double>(int, int, int, bool, std::vector<std::vector<double>>&);
+

@@ -2,11 +2,9 @@
 #include <cuda_runtime.h>
 #include <iostream>
 #include <iomanip>
-
-
-__global__ void gpu_heat_step(const float* d_prev, float* d_next, int n, int m);
-__global__ void gpu_compute_row_averages(const float* d_matrix, float* d_averages, int n, int m);
-
+#include <cuda.h>
+#include <type_traits>
+#include <vector>
 
 
 __global__ void gpu_heat_step(const float* d_prev, float* d_next, int n, int m) {
@@ -28,86 +26,83 @@ __global__ void gpu_heat_step(const float* d_prev, float* d_next, int n, int m) 
 }
 __global__ void gpu_compute_row_averages(const float* d_matrix, float* d_averages, int n, int m) {
     int row = blockIdx.x;
+     __shared__ float sum;
+ if (threadIdx.x == 0) sum = 0.0f;
+    __syncthreads();
 
-    if (row < n) {
-        float sum = 0.0f;
-        for (int j = 0; j < m; ++j) {
-            sum += d_matrix[row * m + j];
-        }
-        d_averages[row] = sum / (float)m;
+    if (row < n && threadIdx.x < m) {
+        atomicAdd(reinterpret_cast<unsigned long long*>(&sum),
+          __double_as_longlong(d_matrix[row * m + threadIdx.x]));
+
+    }
+    __syncthreads();
+
+    if (threadIdx.x == 0) {
+        d_averages[row] = sum / m;
     }
 }
-void run_gpu_simulation(int n, int m, int p, bool compute_average, std::vector<std::vector<float>>& result_matrix,bool timing_enabled, int threads_per_block) {
-    // Allocate host matrices
-    std::vector<float> h_previousMatrix(n * m, 0.0f);
-    std::vector<float> h_nextMatrix(n * m, 0.0f);
+ 
 
-    // Initialize host matrices (same as CPU initialization)
+// Host function template
+
+template <typename T>
+void run_gpu_simulation(int n, int m, int p, bool compute_average,
+                        std::vector<std::vector<T>>& result_matrix,
+                        bool timing_enabled, int threads_per_block) {
+
+    size_t matrix_size = n * m * sizeof(T);
+    T* d_prev;
+    T* d_next;
+    cudaMalloc(&d_prev, matrix_size);
+    cudaMalloc(&d_next, matrix_size);
+
+    std::vector<T> h_initial(n * m, static_cast<T>(273));
     for (int i = 0; i < n; ++i) {
-        float boundary_value = 0.98f * (float)((i + 1) * (i + 1)) / (float)(n * n);
-        h_previousMatrix[i * m + 0] = boundary_value;
-        h_nextMatrix[i * m + 0] = boundary_value;
-        for (int j = 1; j < m; ++j) {
-            float init_value = boundary_value * (float)((m - j) * (m - j)) / (float)(m * m);
-            h_previousMatrix[i * m + j] = init_value;
-            h_nextMatrix[i * m + j] = init_value;
-        }
+        h_initial[i * m + 0] = static_cast<T>(373);
     }
+    cudaMemcpy(d_prev, h_initial.data(), matrix_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_next, h_initial.data(), matrix_size, cudaMemcpyHostToDevice);
 
-    // Device pointers
-    float* d_prev;
-    float* d_next;
-
-    cudaMalloc(&d_prev, n * m * sizeof(float));
-    cudaMalloc(&d_next, n * m * sizeof(float));
-
-    // Copy host to device
-    cudaMemcpy(d_prev, h_previousMatrix.data(), n * m * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_next, h_nextMatrix.data(), n * m * sizeof(float), cudaMemcpyHostToDevice);
-
-    // Setup execution config
-    dim3 gridDim(n);
-    dim3 blockDim(threads_per_block);
-
-    // Run p iterations
     for (int iter = 0; iter < p; ++iter) {
-        gpu_heat_step<<<gridDim, blockDim>>>(d_prev, d_next, n, m);
-        cudaDeviceSynchronize();
-        // Swap pointers
+        if constexpr (std::is_same<T, float>::value) {
+            gpu_heat_step_float<<<n, threads_per_block>>>(d_prev, d_next, n, m);
+        } else {
+            gpu_heat_step_double<<<n, threads_per_block>>>(d_prev, d_next, n, m);
+        }
         std::swap(d_prev, d_next);
     }
 
-    // Copy result back
-    cudaMemcpy(h_previousMatrix.data(), d_prev, n * m * sizeof(float), cudaMemcpyDeviceToHost);
+    std::vector<T> h_result(n * m);
+    cudaMemcpy(h_result.data(), d_prev, matrix_size, cudaMemcpyDeviceToHost);
 
-    // Optional: compute row averages if needed
+    result_matrix.resize(n, std::vector<T>(m, static_cast<T>(0)));
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < m; ++j)
+            result_matrix[i][j] = h_result[i * m + j];
+
     if (compute_average) {
-        float* d_averages;
-        float* h_averages = new float[n];
-
-        cudaMalloc(&d_averages, n * sizeof(float));
-        gpu_compute_row_averages<<<gridDim, 1>>>(d_prev, d_averages, n, m);
-        cudaMemcpy(h_averages, d_averages, n * sizeof(float), cudaMemcpyDeviceToHost);
-
-        for (int i = 0; i < n; ++i) {
-        std::cout << "Row " << i << " average temperature: "
-          << std::fixed << std::setprecision(6) << h_averages[i] << std::endl;
-
+        T* d_averages;
+        std::vector<T> h_averages(n);
+        cudaMalloc(&d_averages, n * sizeof(T));
+        if constexpr (std::is_same<T, float>::value) {
+            gpu_compute_row_averages_float<<<n, m>>>(d_prev, d_averages, n, m);
+        } else {
+            gpu_compute_row_averages_double<<<n, m>>>(d_prev, d_averages, n, m);
         }
-
-        delete[] h_averages;
+        cudaMemcpy(h_averages.data(), d_averages, n * sizeof(T), cudaMemcpyDeviceToHost);
+        for (int i = 0; i < n; ++i) {
+            std::cout << "Row " << i << " average temperature: " << std::setprecision(6) << h_averages[i] << std::endl;
+        }
         cudaFree(d_averages);
     }
 
-    // Fill result matrix to return
-    result_matrix.resize(n, std::vector<float>(m, 0.0f));
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < m; ++j) {
-            result_matrix[i][j] = h_previousMatrix[i * m + j];
-        }
-    }
-
-    // Free device memory
     cudaFree(d_prev);
     cudaFree(d_next);
 }
+
+// Explicit instantiations
+
+template void run_gpu_simulation<float>(int, int, int, bool,
+        std::vector<std::vector<float>>&, bool, int);
+template void run_gpu_simulation<double>(int, int, int, bool,
+        std::vector<std::vector<double>>&, bool, int);
